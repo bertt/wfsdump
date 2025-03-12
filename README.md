@@ -2,6 +2,8 @@
 
 ## Usage 
 
+![image](https://github.com/user-attachments/assets/09ebd759-519d-425c-bc20-141c2af47212)
+
 ```
 Description:
   CLI tool for dump WFS data to PostGIS table
@@ -19,7 +21,7 @@ Options:
   --output <output>          output table [default: public.wfs_dump]
   --columns <columns>        output columns geometry,attributes (csv) [default: geom,attributes]
   --jobs <jobs>              Number of parallel jobs [default: 2]
-  --bbox <bbox>              bbox (space separated) [default: -179 -85 179 85]
+  --bbox <bbox>              bbox (xmin ymin xmax ymax - EPSG:4326 - space separated) [default: -179 -85 179 85]
   --z <z>                    Tile Z [default: 14]
   --version                  Show version information
   -?, -h, --help             Show help and usage information
