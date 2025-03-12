@@ -38,3 +38,5 @@ Sample:
 ```
 ./wfsdump https://ahocevar.com/geoserver/wfs ne:ne_10m_admin_0_countries --z 5 --jobs 1
 ```
+
+Other WFS services are not tested (yet)
