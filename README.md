@@ -1,5 +1,7 @@
 # wfsdump
 
+## Usage 
+
 ```
 Description:
   CLI tool for dump WFS data to PostGIS table
@@ -32,11 +34,14 @@ CREATE TABLE public.wfs_dump (
 );
 ```
 
-
-Sample:
+## Sample
 
 ```
 ./wfsdump https://ahocevar.com/geoserver/wfs ne:ne_10m_admin_0_countries --z 5 --jobs 1
 ```
 
 Other WFS services are not tested (yet)
+
+## History
+
+25-03-12: Initial version 0.1
