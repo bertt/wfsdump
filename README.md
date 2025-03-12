@@ -1,6 +1,6 @@
 # wfsdump
 
-## Uages 
+## Usage 
 
 ```
 Description:
