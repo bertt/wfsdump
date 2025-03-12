@@ -35,73 +35,82 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
         DefaultRequestHeaders = { ConnectionClose = true }
     };
 
-    await Parallel.ForEachAsync(tiles, parallelOptions, async (tile, token) =>
+    try
     {
-        ShowProgress(tiles.IndexOf(tile), tiles.Count);
 
-        var tileExtent = tile.Bounds();
-        var query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:4326";
-
-        var response = await client.GetAsync(query);
-        response.EnsureSuccessStatusCode();
-        string json = await response.Content.ReadAsStringAsync();
-        var reader = new GeoJsonReader();
-        var featureCollection = reader.Read<FeatureCollection>(json);
-
-        var featuresInTile = new List<IFeature>();
-        foreach (var feature in featureCollection)
+        await Parallel.ForEachAsync(tiles, parallelOptions, async (tile, token) =>
         {
-            var geometry = feature.Geometry;
-            var centroid = geometry.Centroid;
+            ShowProgress(tiles.IndexOf(tile), tiles.Count);
 
-            var tileBounds = tile.Bounds();
-            // check if centroid is within tile
-            if (tileBounds[0] < centroid.X &&
-                tileBounds[1] < centroid.Y &&
-                tileBounds[2] > centroid.X &&
-                tileBounds[3] > centroid.Y)
-            {
-                featuresInTile.Add(feature);
-            }
-        }
+            var tileExtent = tile.Bounds();
+            var query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:4326";
 
-        if (featuresInTile.Count > 0)
-        {
-            if (featuresInTile.Count > 5000)
-            {
-                Console.WriteLine($"Tile {tile} has {featuresInTile.Count} features...");
-            }
-            var connection = new NpgsqlConnection(connectionString);
-            connection.Open();
-            var transaction = connection.BeginTransaction();
-            var command = connection.CreateCommand();
-            command.Transaction = transaction;
+            var response = await client.GetAsync(query);
+            response.EnsureSuccessStatusCode();
+            string json = await response.Content.ReadAsStringAsync();
+            var reader = new GeoJsonReader();
+            var featureCollection = reader.Read<FeatureCollection>(json);
 
-            // insert features
-            foreach (var feature in featuresInTile)
+            var featuresInTile = new List<IFeature>();
+            foreach (var feature in featureCollection)
             {
-                var attributes = feature.Attributes;
-                // convert attributes to json
-                var attributesJson = JsonConvert.SerializeObject(attributes);
-                string jsonEscaped = attributesJson.Replace("'", "''");
                 var geometry = feature.Geometry;
+                var centroid = geometry.Centroid;
 
-                var wkb = new WKBWriter().Write(geometry);
-                var wkbHex = BitConverter.ToString(wkb).Replace("-", "");
-                var wkbHexLiteral = $"\\x{wkbHex}";
-                var insert = $"INSERT INTO {outputTable} ({outputGeometryColumn}, {outputAttributesColumn}) VALUES (ST_GeomFromWKB('{wkbHexLiteral}', 4326), '{jsonEscaped}'::jsonb)";
-                command.CommandText = insert;
-                command.ExecuteNonQuery();
+                var tileBounds = tile.Bounds();
+                // check if centroid is within tile
+                if (tileBounds[0] < centroid.X &&
+                    tileBounds[1] < centroid.Y &&
+                    tileBounds[2] > centroid.X &&
+                    tileBounds[3] > centroid.Y)
+                {
+                    featuresInTile.Add(feature);
+                }
             }
 
-            transaction.Commit();
-            connection.Close();
-        }
-    });
-    ShowProgress(tiles.Count, tiles.Count);
+            if (featuresInTile.Count > 0)
+            {
+                if (featuresInTile.Count > 5000)
+                {
+                    Console.WriteLine($"Tile {tile} has {featuresInTile.Count} features...");
+                }
+                var connection = new NpgsqlConnection(connectionString);
+                connection.Open();
+                var transaction = connection.BeginTransaction();
+                var command = connection.CreateCommand();
+                command.Transaction = transaction;
 
-    Console.WriteLine();
-    Console.WriteLine("Program finished");
+                // insert features
+                foreach (var feature in featuresInTile)
+                {
+                    var attributes = feature.Attributes;
+                    // convert attributes to json
+                    var attributesJson = JsonConvert.SerializeObject(attributes);
+                    string jsonEscaped = attributesJson.Replace("'", "''");
+                    var geometry = feature.Geometry;
+
+                    var wkb = new WKBWriter().Write(geometry);
+                    var wkbHex = BitConverter.ToString(wkb).Replace("-", "");
+                    var wkbHexLiteral = $"\\x{wkbHex}";
+                    var insert = $"INSERT INTO {outputTable} ({outputGeometryColumn}, {outputAttributesColumn}) VALUES (ST_GeomFromWKB('{wkbHexLiteral}', 4326), '{jsonEscaped}'::jsonb)";
+                    command.CommandText = insert;
+                    command.ExecuteNonQuery();
+                }
+
+                transaction.Commit();
+                connection.Close();
+            }
+        });
+        ShowProgress(tiles.Count, tiles.Count);
+
+        Console.WriteLine();
+        Console.WriteLine("Program finished");
+    }
+    catch (Exception ex)
+    {
+        // write stack trace
+        Console.WriteLine(ex);
+    }
 }
 
 static void ShowProgress(int progress, int total)
@@ -112,7 +121,7 @@ static void ShowProgress(int progress, int total)
     Console.Write("\r[");
     Console.Write(new string('#', progressWidth));
     Console.Write(new string('-', width - progressWidth));
-    var perc = progress * 100 / total;
+    var perc = (double)progress * 100 / total;
     Console.Write($"] {perc:F2}%");
 }
 
