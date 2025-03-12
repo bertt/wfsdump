@@ -23,6 +23,16 @@ Options:
   -?, -h, --help             Show help and usage information
 ```
 
+Create output table sample:
+
+```
+CREATE TABLE public.wfs_dump (
+    geom GEOMETRY,
+    attributes jsonb
+);
+```
+
+
 Sample:
 
 ```
