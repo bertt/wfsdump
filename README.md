@@ -2,6 +2,8 @@
 
 ## Usage 
 
+![image](https://github.com/user-attachments/assets/09ebd759-519d-425c-bc20-141c2af47212)
+
 ```
 Description:
   CLI tool for dump WFS data to PostGIS table
