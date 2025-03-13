@@ -35,6 +35,8 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
         DefaultRequestHeaders = { ConnectionClose = true }
     };
 
+    var tilesWithErrors = new List<ErrorTile>();
+
     try
     {
 
@@ -46,64 +48,82 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
             var query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:4326";
 
             var response = await client.GetAsync(query);
-            response.EnsureSuccessStatusCode();
-            string json = await response.Content.ReadAsStringAsync();
-            var reader = new GeoJsonReader();
-            var featureCollection = reader.Read<FeatureCollection>(json);
 
-            var featuresInTile = new List<IFeature>();
-            foreach (var feature in featureCollection)
+            // check for statusCode 500
+            if (!response.IsSuccessStatusCode)
             {
-                var geometry = feature.Geometry;
-                var centroid = geometry.Centroid;
+                string json = await response.Content.ReadAsStringAsync();
+                var reader = new GeoJsonReader();
+                var featureCollection = reader.Read<FeatureCollection>(json);
 
-                var tileBounds = tile.Bounds();
-                // check if centroid is within tile
-                if (tileBounds[0] < centroid.X &&
-                    tileBounds[1] < centroid.Y &&
-                    tileBounds[2] > centroid.X &&
-                    tileBounds[3] > centroid.Y)
+                var featuresInTile = new List<IFeature>();
+                foreach (var feature in featureCollection)
                 {
-                    featuresInTile.Add(feature);
+                    var geometry = feature.Geometry;
+                    var centroid = geometry.Centroid;
+
+                    var tileBounds = tile.Bounds();
+                    // check if centroid is within tile
+                    if (tileBounds[0] < centroid.X &&
+                        tileBounds[1] < centroid.Y &&
+                        tileBounds[2] > centroid.X &&
+                        tileBounds[3] > centroid.Y)
+                    {
+                        featuresInTile.Add(feature);
+                    }
+                }
+
+                if (featuresInTile.Count > 0)
+                {
+                    if (featuresInTile.Count > 5000)
+                    {
+                        Console.WriteLine($"Tile {tile} has {featuresInTile.Count} features...");
+                    }
+                    var connection = new NpgsqlConnection(connectionString);
+                    connection.Open();
+                    var transaction = connection.BeginTransaction();
+                    var command = connection.CreateCommand();
+                    command.Transaction = transaction;
+
+                    // insert features
+                    foreach (var feature in featuresInTile)
+                    {
+                        var attributes = feature.Attributes;
+                        // convert attributes to json
+                        var attributesJson = JsonConvert.SerializeObject(attributes);
+                        string jsonEscaped = attributesJson.Replace("'", "''");
+                        var geometry = feature.Geometry;
+
+                        var wkb = new WKBWriter().Write(geometry);
+                        var wkbHex = BitConverter.ToString(wkb).Replace("-", "");
+                        var wkbHexLiteral = $"\\x{wkbHex}";
+                        var insert = $"INSERT INTO {outputTable} ({outputGeometryColumn}, {outputAttributesColumn}) VALUES (ST_GeomFromWKB('{wkbHexLiteral}', 4326), '{jsonEscaped}'::jsonb)";
+                        command.CommandText = insert;
+                        command.ExecuteNonQuery();
+                    }
+
+                    transaction.Commit();
+                    connection.Close();
                 }
             }
-
-            if (featuresInTile.Count > 0)
+            else
             {
-                if (featuresInTile.Count > 5000)
-                {
-                    Console.WriteLine($"Tile {tile} has {featuresInTile.Count} features...");
-                }
-                var connection = new NpgsqlConnection(connectionString);
-                connection.Open();
-                var transaction = connection.BeginTransaction();
-                var command = connection.CreateCommand();
-                command.Transaction = transaction;
-
-                // insert features
-                foreach (var feature in featuresInTile)
-                {
-                    var attributes = feature.Attributes;
-                    // convert attributes to json
-                    var attributesJson = JsonConvert.SerializeObject(attributes);
-                    string jsonEscaped = attributesJson.Replace("'", "''");
-                    var geometry = feature.Geometry;
-
-                    var wkb = new WKBWriter().Write(geometry);
-                    var wkbHex = BitConverter.ToString(wkb).Replace("-", "");
-                    var wkbHexLiteral = $"\\x{wkbHex}";
-                    var insert = $"INSERT INTO {outputTable} ({outputGeometryColumn}, {outputAttributesColumn}) VALUES (ST_GeomFromWKB('{wkbHexLiteral}', 4326), '{jsonEscaped}'::jsonb)";
-                    command.CommandText = insert;
-                    command.ExecuteNonQuery();
-                }
-
-                transaction.Commit();
-                connection.Close();
+                tilesWithErrors.Add(new ErrorTile { Tile = tile, StatusCode = (int)response.StatusCode });
             }
         });
         ShowProgress(tiles.Count, tiles.Count);
 
         Console.WriteLine();
+        Console.WriteLine("Tiles with errors: " + tilesWithErrors.Count);
+
+        // select distinct status codes of tilesWithErrors
+        if(tilesWithErrors.Count > 0)
+        {
+            var distinctStatusCodes = tilesWithErrors.Select(x => x.StatusCode).Distinct();
+            var errorStatus = string.Join(",", distinctStatusCodes);
+            Console.WriteLine("Status codes : " + errorStatus);
+        }
+
         Console.WriteLine("Program finished");
     }
     catch (Exception ex)
@@ -194,4 +214,11 @@ RootCommand GetRootCommand()
     },
     wfsArgument, wfsLayerArgument, connectionStringOption, ouputTableOption, columnsOption, jobsOption, bboxOption, tileZOption);
     return rootCommand;
+}
+
+
+public class ErrorTile
+{
+    public Tile Tile { get; set; }
+    public int StatusCode { get; set; }
 }
