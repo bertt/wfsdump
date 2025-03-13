@@ -51,8 +51,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
 
             var response = await client.GetAsync(query);
 
-            // check for statusCode 500
-            if (!response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode)
             {
                 responseString = await response.Content.ReadAsStringAsync();
                 var reader = new GeoJsonReader();
