@@ -37,6 +37,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
 
     var tilesWithErrors = new List<ErrorTile>();
     string query = String.Empty;
+    string responseString = null;
 
     try
     {
@@ -53,9 +54,9 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
             // check for statusCode 500
             if (!response.IsSuccessStatusCode)
             {
-                string json = await response.Content.ReadAsStringAsync();
+                responseString = await response.Content.ReadAsStringAsync();
                 var reader = new GeoJsonReader();
-                var featureCollection = reader.Read<FeatureCollection>(json);
+                var featureCollection = reader.Read<FeatureCollection>(responseString);
 
                 var featuresInTile = new List<IFeature>();
                 foreach (var feature in featureCollection)
@@ -130,6 +131,8 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     catch (Exception ex)
     {
         Console.WriteLine(query);
+        Console.WriteLine(responseString);
+        Console.WriteLine();
         // write stack trace
         Console.WriteLine(ex);
     }
