@@ -36,6 +36,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     };
 
     var tilesWithErrors = new List<ErrorTile>();
+    string query = String.Empty;
 
     try
     {
@@ -45,7 +46,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
             ShowProgress(tiles.IndexOf(tile), tiles.Count);
 
             var tileExtent = tile.Bounds();
-            var query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:4326";
+            query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:4326";
 
             var response = await client.GetAsync(query);
 
@@ -128,6 +129,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     }
     catch (Exception ex)
     {
+        Console.WriteLine(query);
         // write stack trace
         Console.WriteLine(ex);
     }
