@@ -46,4 +46,6 @@ Other WFS services are not tested (yet)
 
 ## History
 
+25-03-13: Release 0.2, adding error handling
+
 25-03-12: Initial version 0.1
