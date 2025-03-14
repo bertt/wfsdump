@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="wfsdump.ui.MainWindow"
+        Title="wfsdump.ui">
+		<StackPanel Margin="10">
+			<TextBlock Text="WFS URL:" Margin="0,0,0,5"/>
+			<TextBox Name="WfsUrlTextBox" Width="300"/>
+			<Button Content="Submit" Width="100" Margin="0,10,0,0"/>
+		</StackPanel>
+</Window>
