@@ -223,16 +223,8 @@ RootCommand GetRootCommand()
     return rootCommand;
 }
 
-
 public class ErrorTile
 {
     public Tile Tile { get; set; }
     public int StatusCode { get; set; }
-}
-
-
-[JsonSerializable(typeof(FeatureCollection))]
-[JsonSourceGenerationOptions(WriteIndented = true)]
-internal partial class FeatureCollectionContext : JsonSerializerContext
-{
 }
