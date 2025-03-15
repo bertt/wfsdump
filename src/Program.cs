@@ -2,8 +2,9 @@
 using NetTopologySuite.Features;
 using Tiles.Tools;
 using Npgsql;
-using Newtonsoft.Json;
 using System.CommandLine;
+using Newtonsoft.Json;
+using System.Text.Json.Serialization;
 
 Console.WriteLine("Dump WFS to PostGIS table console tool ");
 
@@ -54,8 +55,10 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
             if (response.IsSuccessStatusCode)
             {
                 responseString = await response.Content.ReadAsStringAsync();
-                var reader = new GeoJsonReader();
-                var featureCollection = reader.Read<FeatureCollection>(responseString);
+                var textReader = new StringReader(responseString);
+                var serializer = GeoJsonSerializer.CreateDefault();
+
+                var featureCollection = serializer.Deserialize<FeatureCollection>(new JsonTextReader(textReader));
 
                 var featuresInTile = new List<IFeature>();
                 foreach (var feature in featureCollection)
@@ -225,4 +228,11 @@ public class ErrorTile
 {
     public Tile Tile { get; set; }
     public int StatusCode { get; set; }
+}
+
+
+[JsonSerializable(typeof(FeatureCollection))]
+[JsonSourceGenerationOptions(WriteIndented = true)]
+internal partial class FeatureCollectionContext : JsonSerializerContext
+{
 }
