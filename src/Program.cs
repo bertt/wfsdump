@@ -1,9 +1,11 @@
-﻿using NetTopologySuite.IO;
+﻿using MaxRev.Gdal.Core;
 using NetTopologySuite.Features;
-using Tiles.Tools;
-using Npgsql;
-using System.CommandLine;
+using NetTopologySuite.IO;
 using Newtonsoft.Json;
+using Npgsql;
+using OSGeo.OSR;
+using System.CommandLine;
+using Tiles.Tools;
 
 Console.WriteLine("Dump WFS to PostGIS table console tool ");
 
@@ -11,11 +13,6 @@ var rootCommand = GetRootCommand();
 
 var parseResult = rootCommand.Parse(args);
 
-if (parseResult.Errors.Count > 0)
-{
-    var z = 0;
-}
-Console.WriteLine("Do something");
 var wfs = parseResult.GetResult(rootCommand.Arguments[0])?.GetValueOrDefault<string>();
 var wfsLayer = parseResult.GetResult(rootCommand.Arguments[1])?.GetValueOrDefault<string>();
 var connectionString = parseResult.GetResult(rootCommand.Options[2])?.GetValueOrDefault<string>();
@@ -24,11 +21,13 @@ var outputColumns = parseResult.GetResult(rootCommand.Options[4])?.GetValueOrDef
 var jobs = (int)parseResult.GetResult(rootCommand.Options[5])?.GetValueOrDefault<int>()!;
 var bbox = parseResult.GetResult(rootCommand.Options[6])?.GetValueOrDefault<double[]>();
 var tileZ = (int)parseResult.GetResult(rootCommand.Options[7])?.GetValueOrDefault<int>()!;
+var epsg = (int)parseResult.GetResult(rootCommand.Options[8])?.GetValueOrDefault<int>()!;
 
-RunIt(wfs, wfsLayer, connectionString, outputTable, jobs, bbox, tileZ, outputColumns.Split(',')[0], outputColumns.Split(',')[1]).Wait();
+
+RunIt(wfs, wfsLayer, connectionString, outputTable, jobs, bbox, tileZ, outputColumns.Split(',')[0], outputColumns.Split(',')[1],epsg).Wait();
 
 
-async Task RunIt(string wfs, string wfsLayer, string connectionString, string outputTable, int jobs, double[] bbox, int tileZ, string outputGeometryColumn, string outputAttributesColumn)
+async Task RunIt(string wfs, string wfsLayer, string connectionString, string outputTable, int jobs, double[] bbox, int tileZ, string outputGeometryColumn, string outputAttributesColumn, int epgs)
 {
     Console.WriteLine($"WFS: {wfs}");
     Console.WriteLine($"WFS Layer: {wfsLayer}");
@@ -37,6 +36,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     Console.WriteLine($"Jobs: {jobs}");
     Console.WriteLine($"Extent: {bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}");
     Console.WriteLine($"Tile Z: {tileZ}");
+    Console.WriteLine($"EPSG: {epgs}");
 
     var tiles = Tilebelt.GetTilesOnLevel(bbox, tileZ);
 
@@ -58,13 +58,26 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
 
     try
     {
+        if (epsg != 4326)
+        {
+            GdalBase.ConfigureAll();
+        }
 
         await Parallel.ForEachAsync(tiles, parallelOptions, async (tile, token) =>
         {
             ShowProgress(tiles.IndexOf(tile), tiles.Count);
 
             var tileExtent = tile.Bounds();
-            query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:4326";
+
+            if (epsg != 4326)
+            {
+                // convert tileExtent to given epsg
+                var p = 0;
+                tileExtent = Project(tileExtent, epsg);
+            }
+
+
+            query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:{epsg}";
 
             var response = await client.GetAsync(query);
 
@@ -82,12 +95,12 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
                     var geometry = feature.Geometry;
                     var centroid = geometry.Centroid;
 
-                    var tileBounds = tile.Bounds();
+                    // var tileBounds = tile.Bounds();
                     // check if centroid is within tile
-                    if (tileBounds[0] < centroid.X &&
-                        tileBounds[1] < centroid.Y &&
-                        tileBounds[2] > centroid.X &&
-                        tileBounds[3] > centroid.Y)
+                    if (tileExtent[0] < centroid.X &&
+                        tileExtent[1] < centroid.Y &&
+                        tileExtent[2] > centroid.X &&
+                        tileExtent[3] > centroid.Y)
                     {
                         featuresInTile.Add(feature);
                     }
@@ -117,7 +130,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
                         var wkb = new WKBWriter().Write(geometry);
                         var wkbHex = BitConverter.ToString(wkb).Replace("-", "");
                         var wkbHexLiteral = $"\\x{wkbHex}";
-                        var insert = $"INSERT INTO {outputTable} ({outputGeometryColumn}, {outputAttributesColumn}) VALUES (ST_GeomFromWKB('{wkbHexLiteral}', 4326), '{jsonEscaped}'::jsonb)";
+                        var insert = $"INSERT INTO {outputTable} ({outputGeometryColumn}, {outputAttributesColumn}) VALUES (ST_GeomFromWKB('{wkbHexLiteral}', {epsg}), '{jsonEscaped}'::jsonb)";
                         command.CommandText = insert;
                         command.ExecuteNonQuery();
                     }
@@ -154,6 +167,24 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
         // write stack trace
         Console.WriteLine(ex);
     }
+}
+
+
+
+static double[] Project(double[] extent, int toEpsg)
+{
+    var src = new SpatialReference("");
+    src.ImportFromEPSG(4326);
+
+    var dst = new SpatialReference("");
+    dst.ImportFromEPSG(toEpsg);
+
+    var ct = new CoordinateTransformation(src, dst, new CoordinateTransformationOptions() { });
+    double[] min = new double[] { extent[1], extent[0], 0 };
+    double[] max = new double[] { extent[3], extent[2], 0 };
+    ct.TransformPoint(min);
+    ct.TransformPoint(max);
+    return new double[] { min[0], min[1], max[0], max[1] };
 }
 
 static void ShowProgress(int progress, int total)
@@ -222,6 +253,14 @@ RootCommand GetRootCommand()
         Description = "output columns geometry,attributes (csv)"
     };
 
+    var epsgOption = new Option<int>("--epsg")
+    {
+        DefaultValueFactory = _ => 4326,
+        Required = false,
+        Description = "EPSG"
+    };
+
+
     var rootCommand = new RootCommand("CLI tool for dump WFS data to PostGIS table");
     rootCommand.Arguments.Add(wfsArgument);
     rootCommand.Arguments.Add(wfsLayerArgument);
@@ -231,6 +270,8 @@ RootCommand GetRootCommand()
     rootCommand.Options.Add(jobsOption);
     rootCommand.Options.Add(bboxOption);
     rootCommand.Options.Add(tileZOption);
+    rootCommand.Options.Add(epsgOption);
+
 
     return rootCommand;
 

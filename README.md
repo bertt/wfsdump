@@ -23,7 +23,8 @@ Options:
   --jobs <jobs>              Number of parallel jobs [default: 2]
   --bbox <bbox>              bbox (xmin ymin xmax ymax - EPSG:4326 - space separated) [default: -179 -85 179 85]
   --z <z>                    Tile Z [default: 14]
-  --version                  Show version information
+  --epsg <epsg>              Output EPSG code [default: 4326]
+  --version                  Show version information 
   -?, -h, --help             Show help and usage information
 ```
 
@@ -35,6 +36,12 @@ CREATE TABLE public.wfs_dump (
     attributes jsonb
 );
 ```
+
+## Projections
+
+By default, EPSG code 4326 is used for requesting the WFS and storing the geometries.
+
+If EPSG code is specified for a country, the specified code is used to request the WFS service and store the geometries. The bbox should always be defined in EPSG:4326.
 
 ## Sample
 
