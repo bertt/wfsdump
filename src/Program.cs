@@ -74,7 +74,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
                 tileExtent = Project(tileExtent, epsg);
             }
 
-            query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:{epsg}";
+            query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:{epsg}&SRSNAME=EPSG:{epsg}";
 
             var response = await client.GetAsync(query);
 
