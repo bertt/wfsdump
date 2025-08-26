@@ -71,11 +71,8 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
 
             if (epsg != 4326)
             {
-                // convert tileExtent to given epsg
-                var p = 0;
                 tileExtent = Project(tileExtent, epsg);
             }
-
 
             query = $"{wfs}?SERVICE=WFS&VERSION=2.0.0&REQUEST=GetFeature&TYPENAME={wfsLayer}&OUTPUTFORMAT=application/json&BBOX={tileExtent[0]},{tileExtent[1]},{tileExtent[2]},{tileExtent[3]},EPSG:{epsg}";
 
@@ -110,7 +107,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
                 {
                     if (featuresInTile.Count > 5000)
                     {
-                        Console.WriteLine($"Tile {tile} has {featuresInTile.Count} features...");
+                        Console.WriteLine($"Warning tile {tile} has {featuresInTile.Count} features...");
                     }
                     var connection = new NpgsqlConnection(connectionString);
                     connection.Open();
@@ -175,13 +172,14 @@ static double[] Project(double[] extent, int toEpsg)
 {
     var src = new SpatialReference("");
     src.ImportFromEPSG(4326);
+    src.SetAxisMappingStrategy(AxisMappingStrategy.OAMS_TRADITIONAL_GIS_ORDER);
 
     var dst = new SpatialReference("");
     dst.ImportFromEPSG(toEpsg);
 
     var ct = new CoordinateTransformation(src, dst, new CoordinateTransformationOptions() { });
-    double[] min = new double[] { extent[1], extent[0], 0 };
-    double[] max = new double[] { extent[3], extent[2], 0 };
+    double[] min = new double[] { extent[0], extent[1], 0 };
+    double[] max = new double[] { extent[2], extent[3], 0 };
     ct.TransformPoint(min);
     ct.TransformPoint(max);
     return new double[] { min[0], min[1], max[0], max[1] };
