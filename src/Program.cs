@@ -111,8 +111,6 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     Console.WriteLine($"Tile Z: {tileZ}");
     Console.WriteLine($"EPSG: {epsg}");
 
-    return;
-
     var tiles = Tilebelt.GetTilesOnLevel(bbox, tileZ);
 
     Console.WriteLine("Tiles count: " + tiles.Count);
