@@ -41,7 +41,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
 
     var tilesWithErrors = new List<ErrorTile>();
     string query = String.Empty;
-    string responseString = null;
+    string? responseString = null;
 
     try
     {
@@ -71,7 +71,7 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
                 var textReader = new StringReader(responseString);
                 var serializer = GeoJsonSerializer.CreateDefault();
 
-                var featureCollection = serializer.Deserialize<FeatureCollection>(new JsonTextReader(textReader));
+                var featureCollection = serializer.Deserialize<FeatureCollection>(new JsonTextReader(textReader))!;
 
                 var featuresInTile = new List<IFeature>();
                 foreach (var feature in featureCollection)
@@ -256,13 +256,13 @@ RootCommand BuildCommand()
 
     rootCommand.SetAction(parseResult =>
     {
-        var wfs = parseResult.GetValue(wfsArgument);
-        var wfsLayer = parseResult.GetValue(wfsLayerArgument);
-        var connectionString = parseResult.GetValue(connectionStringOption);
-        var outputTable = parseResult.GetValue(outputTableOption);
-        var outputColumns = parseResult.GetValue(columnsOption);
+        var wfs = parseResult.GetValue(wfsArgument)!;
+        var wfsLayer = parseResult.GetValue(wfsLayerArgument)!;
+        var connectionString = parseResult.GetValue(connectionStringOption)!;
+        var outputTable = parseResult.GetValue(outputTableOption)!;
+        var outputColumns = parseResult.GetValue(columnsOption)!;
         var jobs = parseResult.GetValue(jobsOption);
-        var bbox = parseResult.GetValue(bboxOption);
+        var bbox = parseResult.GetValue(bboxOption)!;
         var tileZ = parseResult.GetValue(tileZOption);
         var epsg = parseResult.GetValue(epsgOption);
 
