@@ -40,7 +40,10 @@ CREATE TABLE public.wfs_dump (
 
 By default, EPSG code 4326 is used for requesting the WFS and storing the geometries.
 
-If EPSG code is specified for a country, the specified code is used to request the WFS service and store the geometries. The bbox should always be defined in EPSG:4326.
+If EPSG code is specified for a country, the specified code is used to request the WFS service (for the bounding box and output SRS) and store 
+the geometries. 
+
+Note: The bbox should always be defined in EPSG:4326.
 
 ## Sample
 
@@ -51,6 +54,8 @@ If EPSG code is specified for a country, the specified code is used to request t
 Other WFS services are not tested (yet)
 
 ## History
+
+25-08-28: Release alpha 16, adding EPSG output code
 
 25-03-13: Release 0.2, adding error handling
 
