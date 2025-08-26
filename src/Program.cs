@@ -9,25 +9,98 @@ using Tiles.Tools;
 
 Console.WriteLine("Dump WFS to PostGIS table console tool ");
 
-var rootCommand = GetRootCommand();
+var wfsArgument = new Argument<string>(
+           "wfs"
+       );
+wfsArgument.Description = "WFS service";
+var wfsLayerArgument = new Argument<string>(
+           "wfsLayer"
+       );
+wfsLayerArgument.Description = "WFS layer name";
+
+var connectionStringOption = new Option<string>("--connection")
+{
+    DefaultValueFactory = _ => "Host=localhost;Username=postgres;Password=postgres;Database=postgres",
+    Required = false,
+    Description = "Connection string"
+};
+
+var outputTableOption = new Option<string>("--output")
+{
+    DefaultValueFactory = _ => "public.wfs_dump",
+    Required = false,
+    Description = "output table"
+};
+
+var jobsOption = new Option<int>("--jobs")
+{
+    DefaultValueFactory = _ => 2,
+    Required = false,
+    Description = "Number of parallel jobs",
+};
+
+var bboxOption = new Option<double[]>("--bbox")
+{
+    DefaultValueFactory = _ => new double[] { -179, -85, 179, 85 },
+    Required = false,
+    Description = "bbox (space separated)",
+    AllowMultipleArgumentsPerToken = true
+};
+
+var tileZOption = new Option<int>("--z")
+{
+    DefaultValueFactory = _ => 14,
+    Required = false,
+    Description = "Tile Z"
+};
+
+var columnsOption = new Option<string>("--columns")
+{
+    DefaultValueFactory = _ => "geom,attributes",
+    Required = false,
+    Description = "output columns geometry,attributes (csv)"
+};
+
+var epsgOption = new Option<int>("--epsg")
+{
+    DefaultValueFactory = _ => 4326,
+    Required = false,
+    Description = "EPSG"
+};
+
+
+var rootCommand = new RootCommand("CLI tool for dump WFS data to PostGIS table");
+rootCommand.Arguments.Add(wfsArgument);
+rootCommand.Arguments.Add(wfsLayerArgument);
+rootCommand.Options.Add(connectionStringOption);
+rootCommand.Options.Add(outputTableOption);
+rootCommand.Options.Add(columnsOption);
+rootCommand.Options.Add(jobsOption);
+rootCommand.Options.Add(bboxOption);
+rootCommand.Options.Add(tileZOption);
+rootCommand.Options.Add(epsgOption);
+
+rootCommand.SetAction(parseResult =>
+{
+    var wfs = parseResult.GetValue(wfsArgument);
+    var wfsLayer = parseResult.GetValue(wfsLayerArgument);
+    var connectionString = parseResult.GetValue(connectionStringOption);
+    var outputTable = parseResult.GetValue(outputTableOption);
+    var outputColumns = parseResult.GetValue(columnsOption);
+    var jobs = parseResult.GetValue(jobsOption);
+    var bbox = parseResult.GetValue(bboxOption);
+    var tileZ = parseResult.GetValue(tileZOption);
+    var epsg = parseResult.GetValue(epsgOption);
+
+    RunIt(wfs, wfsLayer, connectionString, outputTable, jobs, bbox, tileZ, outputColumns.Split(',')[0], outputColumns.Split(',')[1], epsg).Wait();
+
+    return;
+});
 
 var parseResult = rootCommand.Parse(args);
+parseResult.Invoke();
 
-var wfs = parseResult.GetResult(rootCommand.Arguments[0])?.GetValueOrDefault<string>();
-var wfsLayer = parseResult.GetResult(rootCommand.Arguments[1])?.GetValueOrDefault<string>();
-var connectionString = parseResult.GetResult(rootCommand.Options[2])?.GetValueOrDefault<string>();
-var outputTable = parseResult.GetResult(rootCommand.Options[3])?.GetValueOrDefault<string>();
-var outputColumns = parseResult.GetResult(rootCommand.Options[4])?.GetValueOrDefault<string>();
-var jobs = (int)parseResult.GetResult(rootCommand.Options[5])?.GetValueOrDefault<int>()!;
-var bbox = parseResult.GetResult(rootCommand.Options[6])?.GetValueOrDefault<double[]>();
-var tileZ = (int)parseResult.GetResult(rootCommand.Options[7])?.GetValueOrDefault<int>()!;
-var epsg = (int)parseResult.GetResult(rootCommand.Options[8])?.GetValueOrDefault<int>()!;
-
-
-RunIt(wfs, wfsLayer, connectionString, outputTable, jobs, bbox, tileZ, outputColumns.Split(',')[0], outputColumns.Split(',')[1],epsg).Wait();
-
-
-async Task RunIt(string wfs, string wfsLayer, string connectionString, string outputTable, int jobs, double[] bbox, int tileZ, string outputGeometryColumn, string outputAttributesColumn, int epgs)
+async Task RunIt(string wfs, string wfsLayer, string connectionString, string outputTable, int jobs, double[] bbox, int tileZ, string outputGeometryColumn, string outputAttributesColumn, int epsg)
 {
     Console.WriteLine($"WFS: {wfs}");
     Console.WriteLine($"WFS Layer: {wfsLayer}");
@@ -36,7 +109,9 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     Console.WriteLine($"Jobs: {jobs}");
     Console.WriteLine($"Extent: {bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}");
     Console.WriteLine($"Tile Z: {tileZ}");
-    Console.WriteLine($"EPSG: {epgs}");
+    Console.WriteLine($"EPSG: {epsg}");
+
+    return;
 
     var tiles = Tilebelt.GetTilesOnLevel(bbox, tileZ);
 
@@ -165,9 +240,6 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
         Console.WriteLine(ex);
     }
 }
-
-
-
 static double[] Project(double[] extent, int toEpsg)
 {
     var src = new SpatialReference("");
@@ -195,84 +267,6 @@ static void ShowProgress(int progress, int total)
     Console.Write(new string('-', width - progressWidth));
     var perc = (double)progress * 100 / total;
     Console.Write($"] {perc:F2}%");
-}
-
-RootCommand GetRootCommand()
-{
-    var wfsArgument = new Argument<string>(
-               "wfs"
-           );
-    wfsArgument.Description = "WFS service";
-    var wfsLayerArgument = new Argument<string>(
-               "wfsLayer"
-           );
-    wfsLayerArgument.Description = "WFS layer name";
-
-    var connectionStringOption = new Option<string>("--connection")
-    {
-        DefaultValueFactory = _ => "Host=localhost;Username=postgres;Password=postgres;Database=postgres",
-        Required = false,
-        Description = "Connection string"
-    };
-
-    var ouputTableOption = new Option<string>("--output")
-    {
-        DefaultValueFactory = _ => "public.wfs_dump",
-        Required = false,
-        Description = "output table"
-    };
-
-    var jobsOption = new Option<int>("--jobs")
-    {
-        DefaultValueFactory = _ => 2,
-        Required = false,
-        Description = "Number of parallel jobs",
-    };
-
-    var bboxOption = new Option<double[]>("--bbox")
-    {
-        DefaultValueFactory = _ => new double[] { -179, -85, 179, 85 },
-        Required = false,
-        Description = "bbox (space separated)",
-        AllowMultipleArgumentsPerToken = true
-    };
-
-    var tileZOption = new Option<int>("--z")
-    {
-        DefaultValueFactory = _ => 14,
-        Required = false,
-        Description = "Tile Z"
-    };
-
-    var columnsOption = new Option<string>("--columns")
-    {
-        DefaultValueFactory = _ => "geom,attributes",
-        Required = false,
-        Description = "output columns geometry,attributes (csv)"
-    };
-
-    var epsgOption = new Option<int>("--epsg")
-    {
-        DefaultValueFactory = _ => 4326,
-        Required = false,
-        Description = "EPSG"
-    };
-
-
-    var rootCommand = new RootCommand("CLI tool for dump WFS data to PostGIS table");
-    rootCommand.Arguments.Add(wfsArgument);
-    rootCommand.Arguments.Add(wfsLayerArgument);
-    rootCommand.Options.Add(connectionStringOption);
-    rootCommand.Options.Add(ouputTableOption);
-    rootCommand.Options.Add(columnsOption);
-    rootCommand.Options.Add(jobsOption);
-    rootCommand.Options.Add(bboxOption);
-    rootCommand.Options.Add(tileZOption);
-    rootCommand.Options.Add(epsgOption);
-
-
-    return rootCommand;
-
 }
 
 public class ErrorTile
