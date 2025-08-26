@@ -13,19 +13,18 @@ Usage:
 
 Arguments:
   <wfs>       WFS service
-  <wfsLayer>  WFS layer
+  <wfsLayer>  WFS layer name
 
 Options:
-  --connection <connection>  Connection string [default:
-                             Host=localhost;Username=postgres;Password=postgres;Database=postgres]
-  --output <output>          output table [default: public.wfs_dump]
-  --columns <columns>        output columns geometry,attributes (csv) [default: geom,attributes]
-  --jobs <jobs>              Number of parallel jobs [default: 2]
-  --bbox <bbox>              bbox (xmin ymin xmax ymax - EPSG:4326 - space separated) [default: -179 -85 179 85]
-  --z <z>                    Tile Z [default: 14]
-  --epsg <epsg>              Output EPSG code [default: 4326]
-  --version                  Show version information 
-  -?, -h, --help             Show help and usage information
+  -?, -h, --help  Show help and usage information
+  --version       Show version information
+  --connection    Connection string [default: Host=localhost;Username=postgres;Password=postgres;Database=postgres]
+  --output        output table [default: public.wfs_dump]
+  --columns       output columns geometry,attributes (csv) [default: geom,attributes]
+  --jobs          Number of parallel jobs [default: 2]
+  --bbox          bbox (space separated) [default: -179|-85|179|85]
+  --z             Tile Z [default: 14]
+  --epsg          EPSG [default: 4326]
 ```
 
 Create output table sample:
