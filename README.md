@@ -55,7 +55,7 @@ Other WFS services are not tested (yet)
 
 ## History
 
-25-08-28: Release alpha 16, adding EPSG output code
+25-08-28: Release 0.2 alpha 16, adding EPSG output code
 
 25-03-13: Release 0.2, adding error handling
 
