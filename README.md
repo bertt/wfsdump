@@ -48,7 +48,7 @@ See for bbox definition http://bboxfinder.com/
 
 By default, EPSG code 4326 is used for requesting the WFS and storing the geometries.
 
-If another EPSG code is specified, the EPSG code is used to request the WFS service (for the bounding box and output SRS) and store 
+If another EPSG code is specified, the EPSG code is used to request the WFS service (for the bounding box and output SRSNAME) and store 
 the geometries. 
 
 Note: The bbox should always be defined in EPSG:4326.
