@@ -61,6 +61,10 @@ Note: The bbox should always be defined in EPSG:4326.
 
 Other WFS services are not tested (yet)
 
+## Releases
+
+See https://github.com/bertt/wfsdump/tags for releases, zipped executables are available for Linux/Windows/Mac 
+
 ## History
 
 25-08-28: Release 0.2 alpha 16, adding EPSG output code
