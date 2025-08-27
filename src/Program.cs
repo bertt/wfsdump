@@ -36,7 +36,6 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
 
     var client = new HttpClient
     {
-        DefaultRequestHeaders = { ConnectionClose = true }
     };
 
     var tilesWithErrors = new List<ErrorTile>();
