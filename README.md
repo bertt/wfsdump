@@ -36,6 +36,14 @@ CREATE TABLE public.wfs_dump (
 );
 ```
 
+## XYZ Tiling
+
+The WFS is requested using XYZ tiles. The list of tiles is generated from the bbox parameter (default: -179|-85|179|85 in EPSG:4326) and the Z level (default 14).
+
+See for XYZ tiles visualisation https://docs.maptiler.com/google-maps-coordinates-tile-bounds-projection/
+
+See for bbox definition http://bboxfinder.com/
+
 ## Projections
 
 By default, EPSG code 4326 is used for requesting the WFS and storing the geometries.
