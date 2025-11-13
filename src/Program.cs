@@ -193,7 +193,7 @@ RootCommand BuildCommand()
 
     var connectionStringOption = new Option<string>("--connection")
     {
-        DefaultValueFactory = _ => "Host=localhost;Username=postgres;Password=postgres;Database=postgres",
+        DefaultValueFactory = _ => "Host=localhost;Username=postgres;Password=postgres;Database=postgres;Port=5439",
         Required = false,
         Description = "Connection string"
     };
