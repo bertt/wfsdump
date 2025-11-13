@@ -8,12 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MaxRev.Gdal.Universal" Version="3.11.3.339" />
+    <PackageReference Include="MaxRev.Gdal.Universal" Version="3.12.0.397" />
     <PackageReference Include="NetTopologySuite" Version="2.6.0" />
     <PackageReference Include="NetTopologySuite.Features" Version="2.2.0" />
     <PackageReference Include="NetTopologySuite.IO.GeoJSON" Version="4.0.0" />
-    <PackageReference Include="Npgsql" Version="9.0.3" />
-    <PackageReference Include="System.CommandLine" Version="2.0.0-beta7.25380.108" />
+    <PackageReference Include="Npgsql" Version="9.0.4" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0" />
     <PackageReference Include="tilebelt" Version="2.0.1" />
   </ItemGroup>
 
