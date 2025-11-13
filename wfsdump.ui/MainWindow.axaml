@@ -54,10 +54,18 @@
 						<TextBlock Text="Database Configuration" FontSize="16" FontWeight="SemiBold"/>
 						
 						<StackPanel Spacing="5">
-							<TextBlock Text="Connection String:" FontWeight="Medium"/>
+							<TextBlock Text="Connection String (without password):" FontWeight="Medium"/>
 							<TextBox Name="ConnectionStringTextBox" 
-									 Watermark="Host=localhost;Username=postgres;Password=postgres;Database=postgres"
-									 Text="Host=localhost;Username=postgres;Password=postgres;Database=postgres;Port=5439"/>
+									 Watermark="Host=localhost;Username=postgres;Database=postgres;Port=5432"
+									 Text="Host=localhost;Username=postgres;Database=postgres;Port=5439"/>
+						</StackPanel>
+						
+						<StackPanel Spacing="5">
+							<TextBlock Text="Password:" FontWeight="Medium"/>
+							<TextBox Name="PasswordTextBox" 
+									 Watermark="Enter password"
+									 Text="postgres"
+									 PasswordChar="●"/>
 						</StackPanel>
 						
 						<StackPanel Spacing="5">

@@ -51,7 +51,15 @@ public partial class MainWindow : Window
             // Parse parameters
             var wfs = WfsUrlTextBox.Text;
             var wfsLayer = WfsLayerTextBox.Text;
-            var connectionString = ConnectionStringTextBox.Text ?? "Host=localhost;Username=postgres;Password=postgres;Database=postgres";
+            var baseConnectionString = ConnectionStringTextBox.Text ?? "Host=localhost;Username=postgres;Database=postgres";
+            var password = PasswordTextBox.Text ?? "";
+            
+            var connectionString = baseConnectionString;
+            if (!string.IsNullOrWhiteSpace(password))
+            {
+                connectionString += $";Password={password}";
+            }
+            
             var outputTable = OutputTableTextBox.Text ?? "public.wfs_dump";
             var columns = ColumnsTextBox.Text ?? "geom,attributes";
             var jobs = (int)(JobsNumeric.Value ?? 2);
@@ -131,7 +139,7 @@ public partial class MainWindow : Window
         {
             AppendLog($"WFS: {wfs}");
             AppendLog($"WFS Layer: {wfsLayer}");
-            AppendLog($"Connection: {connectionString}");
+            AppendLog($"Connection: {MaskPassword(connectionString)}");
             AppendLog($"Output table: {outputTable}");
             AppendLog($"Jobs: {jobs}");
             AppendLog($"Extent: {bbox[0]}, {bbox[1]}, {bbox[2]}, {bbox[3]}");
@@ -321,6 +329,23 @@ public partial class MainWindow : Window
         {
             StatusTextBlock.Text = status;
         });
+    }
+
+    private static string MaskPassword(string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+            return connectionString;
+
+        var parts = connectionString.Split(';');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            var part = parts[i].Trim();
+            if (part.StartsWith("Password=", StringComparison.OrdinalIgnoreCase))
+            {
+                parts[i] = "Password=***";
+            }
+        }
+        return string.Join(";", parts);
     }
 
     private async Task ShowMessage(string title, string message)
