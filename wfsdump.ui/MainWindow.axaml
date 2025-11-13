@@ -2,12 +2,196 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="700"
         x:Class="wfsdump.ui.MainWindow"
-        Title="wfsdump.ui">
-		<StackPanel Margin="10">
-			<TextBlock Text="WFS URL:" Margin="0,0,0,5"/>
-			<TextBox Name="WfsUrlTextBox" Width="300"/>
-			<Button Content="Submit" Width="100" Margin="0,10,0,0"/>
+        x:CompileBindings="False"
+        Title="WFS Dump to PostGIS"
+        Width="900" Height="700"
+        MinWidth="700" MinHeight="600">
+	
+	<Grid Margin="20">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto"/>
+			<RowDefinition Height="*"/>
+			<RowDefinition Height="Auto"/>
+		</Grid.RowDefinitions>
+
+		<!-- Header -->
+		<StackPanel Grid.Row="0" Margin="0,0,0,20">
+			<TextBlock Text="WFS Dump to PostGIS" FontSize="24" FontWeight="Bold" Margin="0,0,0,5"/>
+			<TextBlock Text="CLI tool for dumping WFS data to PostGIS table" FontSize="14" Foreground="#888" Margin="0,0,0,10"/>
+			<Separator/>
 		</StackPanel>
+
+		<!-- Main Content -->
+		<ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+			<StackPanel Spacing="15">
+				
+				<!-- WFS Configuration Section -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5" Padding="15">
+					<StackPanel Spacing="10">
+						<TextBlock Text="WFS Configuration" FontSize="16" FontWeight="SemiBold"/>
+						
+						<StackPanel Spacing="5">
+							<TextBlock Text="WFS Service URL:" FontWeight="Medium"/>
+							<TextBox Name="WfsUrlTextBox" 
+									 Watermark="https://ahocevar.com/geoserver/wfs"
+									 Text="https://ahocevar.com/geoserver/wfs"/>
+						</StackPanel>
+						
+						<StackPanel Spacing="5">
+							<TextBlock Text="WFS Layer Name:" FontWeight="Medium"/>
+							<TextBox Name="WfsLayerTextBox" 
+									 Watermark="ne:ne_10m_admin_0_countries"
+									 Text="ne:ne_10m_admin_0_countries"/>
+						</StackPanel>
+					</StackPanel>
+				</Border>
+
+				<!-- Database Configuration Section -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5" Padding="15">
+					<StackPanel Spacing="10">
+						<TextBlock Text="Database Configuration" FontSize="16" FontWeight="SemiBold"/>
+						
+						<StackPanel Spacing="5">
+							<TextBlock Text="Connection String:" FontWeight="Medium"/>
+							<TextBox Name="ConnectionStringTextBox" 
+									 Watermark="Host=localhost;Username=postgres;Password=postgres;Database=postgres"
+									 Text="Host=localhost;Username=postgres;Password=postgres;Database=postgres;Port=5439"/>
+						</StackPanel>
+						
+						<StackPanel Spacing="5">
+							<TextBlock Text="Output Table:" FontWeight="Medium"/>
+							<TextBox Name="OutputTableTextBox" 
+									 Watermark="public.wfs_dump"
+									 Text="public.wfs_dump"/>
+						</StackPanel>
+						
+						<StackPanel Spacing="5">
+							<TextBlock Text="Output Columns (geometry,attributes):" FontWeight="Medium"/>
+							<TextBox Name="ColumnsTextBox" 
+									 Watermark="geom,attributes"
+									 Text="geom,attributes"/>
+						</StackPanel>
+					</StackPanel>
+				</Border>
+
+				<!-- Advanced Settings Section -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5" Padding="15">
+					<StackPanel Spacing="10">
+						<TextBlock Text="Advanced Settings" FontSize="16" FontWeight="SemiBold"/>
+						
+						<Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto,Auto">
+							<StackPanel Grid.Column="0" Grid.Row="0" Spacing="5" Margin="0,0,10,10">
+								<TextBlock Text="Parallel Jobs:" FontWeight="Medium"/>
+								<NumericUpDown Name="JobsNumeric" 
+											   Value="2" 
+											   Minimum="1" 
+											   Maximum="16"/>
+							</StackPanel>
+							
+							<StackPanel Grid.Column="1" Grid.Row="0" Spacing="5" Margin="10,0,0,10">
+								<TextBlock Text="Tile Z Level:" FontWeight="Medium"/>
+								<NumericUpDown Name="TileZNumeric" 
+											   Value="14" 
+											   Minimum="0" 
+											   Maximum="20"/>
+							</StackPanel>
+							
+							<StackPanel Grid.Column="0" Grid.Row="1" Spacing="5" Margin="0,0,10,10" Grid.ColumnSpan="2">
+								<TextBlock Text="EPSG Code:" FontWeight="Medium"/>
+								<NumericUpDown Name="EpsgNumeric" 
+											   Value="4326" 
+											   Minimum="1" 
+											   Maximum="999999"
+											   FormatString="0"/>
+							</StackPanel>
+							
+							<StackPanel Grid.Column="0" Grid.Row="2" Spacing="5" Margin="0,0,10,0" Grid.ColumnSpan="2">
+								<TextBlock Text="Bounding Box (minX minY maxX maxY):" FontWeight="Medium"/>
+								<TextBox Name="BboxTextBox" 
+										 Watermark="-179 -85 179 85"
+										 Text="-179 -85 179 85"/>
+								<TextBlock Text="Note: Always use EPSG:4326 coordinates" FontSize="11" Foreground="#888"/>
+							</StackPanel>
+						</Grid>
+					</StackPanel>
+				</Border>
+
+				<!-- Progress Section -->
+				<Border BorderBrush="#E0E0E0" BorderThickness="1" CornerRadius="5" Padding="15">
+					<StackPanel Spacing="10">
+						<TextBlock Text="Progress" FontSize="16" FontWeight="SemiBold"/>
+						
+						<ProgressBar Name="ProgressBar" 
+									 Height="25" 
+									 Minimum="0" 
+									 Maximum="100" 
+									 Value="0"/>
+						
+						<TextBlock Name="StatusTextBlock" 
+								   Text="Ready to start" 
+								   FontSize="12" 
+								   TextWrapping="Wrap"/>
+						
+						<ScrollViewer Height="150" 
+									  BorderBrush="#E0E0E0" 
+									  BorderThickness="1" 
+									  CornerRadius="3">
+							<TextBox Name="LogTextBox" 
+									 IsReadOnly="True" 
+									 TextWrapping="Wrap" 
+									 AcceptsReturn="True"
+									 Background="#F5F5F5"
+									 FontFamily="Consolas,Courier New"/>
+						</ScrollViewer>
+					</StackPanel>
+				</Border>
+			</StackPanel>
+		</ScrollViewer>
+
+		<!-- Action Buttons -->
+		<StackPanel Grid.Row="2" 
+					Orientation="Horizontal" 
+					HorizontalAlignment="Right" 
+					Spacing="10" 
+					Margin="0,20,0,0">
+			<Button Name="ClearButton" 
+					Content="Clear Log" 
+					Width="120" 
+					Height="35"
+					Click="ClearButton_Click"/>
+			<Button Name="StartButton" 
+					Content="Start Dump" 
+					Width="120" 
+					Height="35"
+					Click="StartButton_Click">
+				<Button.Styles>
+					<Style Selector="Button">
+						<Setter Property="Background" Value="#0078D4"/>
+						<Setter Property="Foreground" Value="White"/>
+					</Style>
+					<Style Selector="Button:pointerover">
+						<Setter Property="Background" Value="#1084E0"/>
+					</Style>
+				</Button.Styles>
+			</Button>
+			<Button Name="StopButton" 
+					Content="Stop" 
+					Width="120" 
+					Height="35"
+					IsEnabled="False"
+					Click="StopButton_Click">
+				<Button.Styles>
+					<Style Selector="Button">
+						<Setter Property="Background" Value="#D13438"/>
+						<Setter Property="Foreground" Value="White"/>
+					</Style>
+					<Style Selector="Button:pointerover /template/ ContentPresenter">
+						<Setter Property="Background" Value="#E04043"/>
+					</Style>
+				</Button.Styles>
+			</Button>
+		</StackPanel>
+	</Grid>
 </Window>
