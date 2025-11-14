@@ -53,6 +53,13 @@ the geometries.
 
 Note: The bbox should always be defined in EPSG:4326.
 
+## GUI tool
+
+See project wfs.ui for functional cross platform GUI application.
+
+<img width="1899" height="989" alt="image" src="https://github.com/user-attachments/assets/3531a4c9-7f93-4815-94d4-5d0dc6261d68" />
+
+
 ## Sample
 
 ```
