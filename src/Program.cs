@@ -25,6 +25,9 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     Console.WriteLine($"Tile Z: {tileZ}");
     Console.WriteLine($"EPSG: {epsg}");
 
+    // Ensure output table exists
+    await EnsureTableExists(connectionString, outputTable, outputGeometryColumn, outputAttributesColumn, epsg);
+
     var tiles = Tilebelt.GetTilesOnLevel(bbox, tileZ);
 
     Console.WriteLine("Tiles count: " + tiles.Count);
@@ -151,6 +154,76 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
         Console.WriteLine(ex);
     }
 }
+
+async Task EnsureTableExists(string connectionString, string outputTable, string geometryColumn, string attributesColumn, int epsg)
+{
+    using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    var tableExists = await CheckTableExists(connection, outputTable);
+
+    if (!tableExists)
+    {
+        Console.WriteLine($"Creating output table: {outputTable}");
+        await CreateTable(connection, outputTable, geometryColumn, attributesColumn, epsg);
+        Console.WriteLine($"Table {outputTable} created successfully");
+    }
+    else
+    {
+        Console.WriteLine($"Table {outputTable} already exists");
+    }
+}
+
+async Task<bool> CheckTableExists(NpgsqlConnection connection, string tableName)
+{
+    var (schema, table) = ParseTableName(tableName);
+
+    var query = @"
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = @schema 
+            AND table_name = @table
+        )";
+
+    using var command = new NpgsqlCommand(query, connection);
+    command.Parameters.AddWithValue("schema", schema);
+    command.Parameters.AddWithValue("table", table);
+
+    var result = await command.ExecuteScalarAsync();
+    return (bool)result!;
+}
+
+async Task CreateTable(NpgsqlConnection connection, string tableName, string geometryColumn, string attributesColumn, int epsg)
+{
+    var (schema, table) = ParseTableName(tableName);
+
+    // Use proper identifier quoting to prevent SQL injection
+    var createTableQuery = $@"
+        CREATE TABLE {QuoteIdentifier(schema)}.{QuoteIdentifier(table)} (
+            {QuoteIdentifier(geometryColumn)} GEOMETRY(Geometry, {epsg}),
+            {QuoteIdentifier(attributesColumn)} jsonb
+        )";
+
+    using var command = new NpgsqlCommand(createTableQuery, connection);
+    await command.ExecuteNonQueryAsync();
+}
+
+static (string schema, string table) ParseTableName(string tableName)
+{
+    var parts = tableName.Split('.');
+    if (parts.Length == 2)
+    {
+        return (parts[0], parts[1]);
+    }
+    return ("public", tableName);
+}
+
+static string QuoteIdentifier(string identifier)
+{
+    // PostgreSQL identifier quoting: double quotes and escape any existing double quotes
+    return "\"" + identifier.Replace("\"", "\"\"") + "\"";
+}
+
 static double[] Project(double[] extent, int toEpsg)
 {
     var src = new SpatialReference("");
