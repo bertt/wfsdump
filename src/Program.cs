@@ -203,14 +203,32 @@ async Task<bool> CheckTableExists(NpgsqlConnection connection, string tableName)
 
 async Task CreateTable(NpgsqlConnection connection, string tableName, string geometryColumn, string attributesColumn, int epsg)
 {
+    // Parse schema and table name
+    var parts = tableName.Split('.');
+    string schema = "public";
+    string table = tableName;
+
+    if (parts.Length == 2)
+    {
+        schema = parts[0];
+        table = parts[1];
+    }
+
+    // Use proper identifier quoting to prevent SQL injection
     var createTableQuery = $@"
-        CREATE TABLE {tableName} (
-            {geometryColumn} GEOMETRY(Geometry, {epsg}),
-            {attributesColumn} jsonb
+        CREATE TABLE {QuoteIdentifier(schema)}.{QuoteIdentifier(table)} (
+            {QuoteIdentifier(geometryColumn)} GEOMETRY(Geometry, {epsg}),
+            {QuoteIdentifier(attributesColumn)} jsonb
         )";
 
     using var command = new NpgsqlCommand(createTableQuery, connection);
     await command.ExecuteNonQueryAsync();
+}
+
+static string QuoteIdentifier(string identifier)
+{
+    // PostgreSQL identifier quoting: double quotes and escape any existing double quotes
+    return "\"" + identifier.Replace("\"", "\"\"") + "\"";
 }
 
 static double[] Project(double[] extent, int toEpsg)
