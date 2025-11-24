@@ -176,15 +176,7 @@ async Task EnsureTableExists(string connectionString, string outputTable, string
 
 async Task<bool> CheckTableExists(NpgsqlConnection connection, string tableName)
 {
-    var parts = tableName.Split('.');
-    string schema = "public";
-    string table = tableName;
-
-    if (parts.Length == 2)
-    {
-        schema = parts[0];
-        table = parts[1];
-    }
+    var (schema, table) = ParseTableName(tableName);
 
     var query = @"
         SELECT EXISTS (
@@ -203,16 +195,7 @@ async Task<bool> CheckTableExists(NpgsqlConnection connection, string tableName)
 
 async Task CreateTable(NpgsqlConnection connection, string tableName, string geometryColumn, string attributesColumn, int epsg)
 {
-    // Parse schema and table name
-    var parts = tableName.Split('.');
-    string schema = "public";
-    string table = tableName;
-
-    if (parts.Length == 2)
-    {
-        schema = parts[0];
-        table = parts[1];
-    }
+    var (schema, table) = ParseTableName(tableName);
 
     // Use proper identifier quoting to prevent SQL injection
     var createTableQuery = $@"
@@ -223,6 +206,16 @@ async Task CreateTable(NpgsqlConnection connection, string tableName, string geo
 
     using var command = new NpgsqlCommand(createTableQuery, connection);
     await command.ExecuteNonQueryAsync();
+}
+
+static (string schema, string table) ParseTableName(string tableName)
+{
+    var parts = tableName.Split('.');
+    if (parts.Length == 2)
+    {
+        return (parts[0], parts[1]);
+    }
+    return ("public", tableName);
 }
 
 static string QuoteIdentifier(string identifier)
