@@ -25,6 +25,9 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
     Console.WriteLine($"Tile Z: {tileZ}");
     Console.WriteLine($"EPSG: {epsg}");
 
+    // Ensure output table exists
+    await EnsureTableExists(connectionString, outputTable, outputGeometryColumn, outputAttributesColumn, epsg);
+
     var tiles = Tilebelt.GetTilesOnLevel(bbox, tileZ);
 
     Console.WriteLine("Tiles count: " + tiles.Count);
@@ -151,6 +154,65 @@ async Task RunIt(string wfs, string wfsLayer, string connectionString, string ou
         Console.WriteLine(ex);
     }
 }
+
+async Task EnsureTableExists(string connectionString, string outputTable, string geometryColumn, string attributesColumn, int epsg)
+{
+    using var connection = new NpgsqlConnection(connectionString);
+    await connection.OpenAsync();
+
+    var tableExists = await CheckTableExists(connection, outputTable);
+
+    if (!tableExists)
+    {
+        Console.WriteLine($"Creating output table: {outputTable}");
+        await CreateTable(connection, outputTable, geometryColumn, attributesColumn, epsg);
+        Console.WriteLine($"Table {outputTable} created successfully");
+    }
+    else
+    {
+        Console.WriteLine($"Table {outputTable} already exists");
+    }
+}
+
+async Task<bool> CheckTableExists(NpgsqlConnection connection, string tableName)
+{
+    var parts = tableName.Split('.');
+    string schema = "public";
+    string table = tableName;
+
+    if (parts.Length == 2)
+    {
+        schema = parts[0];
+        table = parts[1];
+    }
+
+    var query = @"
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = @schema 
+            AND table_name = @table
+        )";
+
+    using var command = new NpgsqlCommand(query, connection);
+    command.Parameters.AddWithValue("schema", schema);
+    command.Parameters.AddWithValue("table", table);
+
+    var result = await command.ExecuteScalarAsync();
+    return (bool)result!;
+}
+
+async Task CreateTable(NpgsqlConnection connection, string tableName, string geometryColumn, string attributesColumn, int epsg)
+{
+    var createTableQuery = $@"
+        CREATE TABLE {tableName} (
+            {geometryColumn} GEOMETRY(Geometry, {epsg}),
+            {attributesColumn} jsonb
+        )";
+
+    using var command = new NpgsqlCommand(createTableQuery, connection);
+    await command.ExecuteNonQueryAsync();
+}
+
 static double[] Project(double[] extent, int toEpsg)
 {
     var src = new SpatialReference("");
